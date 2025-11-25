@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 // Move your logo to src/assets for import
 
-const API_BASE = 'http://localhost:5000/api/admins'; // MongoDB backend
+const API_BASE = 'https://employee-managements-system.onrender.com/api/admins'; // MongoDB backend
 
 const Login = () => {
   const [email, setEmail] = useState('');

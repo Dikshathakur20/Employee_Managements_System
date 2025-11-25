@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
 // ✔ Correct API Base
-const API_BASE = "http://localhost:5000/api/auth";
+const API_BASE = "https://employee-managements-system.onrender.com/api/auth";
 
 const EmployeeLogin = () => {
   const navigate = useNavigate();

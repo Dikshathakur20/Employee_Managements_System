@@ -1,6 +1,8 @@
 import logo from "@/public/logo.png";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import axiosClient from "@/utils/axiosClient"; // <-- USING AXIOS CLIENT NOW
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,48 +10,31 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
-// ✔ Correct API Base
-const API_BASE = "https://employee-managements-system.onrender.com/api/auth";
-
+// Correct API base handled internally by axiosClient
 const EmployeeLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
-  const [mode, setMode] = useState("login"); // login | register | forgot
+  const [mode, setMode] = useState("login"); 
   const [loading, setLoading] = useState(false);
+
   const inactivityTimer = useRef(null);
 
-  // 🔐 Generate Password
-  const generatePassword = (employee) => {
-    const empCode = employee.employee_code || "";
-    const phone = employee.phone || "";
-    const dobValue = employee.dob || employee.date_of_birth || "";
-
-    let year = "0000";
-    if (dobValue) {
-      const parsed = new Date(dobValue);
-      if (!isNaN(parsed)) year = parsed.getFullYear().toString();
-    }
-
-    return `${empCode.slice(-3)}#${phone.slice(-4)}@${year}`;
-  };
-
-  // 🔍 Validate Email
+  // Email validation
   const validateEmail = (email) => {
     const regex =
       /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|in|info|org|net|co|io)$/;
     return regex.test(email);
   };
 
-  // ➤ LOGIN
+  // LOGIN
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -65,25 +50,21 @@ const EmployeeLogin = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      const res = await axiosClient.post("/api/auth/login", form);
+
+      localStorage.setItem("employee", JSON.stringify(res.data.employee));
+      localStorage.setItem("token", res.data.token);
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
-      localStorage.setItem("employee", JSON.stringify(data.employee));
-      localStorage.setItem("token", data.token);
-
-      toast({ title: "Login Successful", description: "Welcome back!" });
 
       navigate("/employee/Dashboard");
     } catch (err) {
       toast({
         title: "Login Failed",
-        description: err.message,
+        description: err.response?.data?.message || "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -91,54 +72,15 @@ const EmployeeLogin = () => {
     }
   };
 
-  // ➤ REGISTER
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const password = "temp@123"; // You replace later
-
-      const res = await fetch(`${API_BASE}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
-      toast({
-        title: "Registration Successful",
-        description: `Your temporary password: ${password}`,
-      });
-
-      setMode("login");
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ➤ FORGOT PASSWORD
+  // FORGOT PASSWORD
   const handleForgot = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email }),
+      await axiosClient.post("/api/auth/forgot-password", {
+        email: form.email,
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
 
       toast({
         title: "Request Sent",
@@ -147,7 +89,7 @@ const EmployeeLogin = () => {
     } catch (err) {
       toast({
         title: "Error",
-        description: err.message,
+        description: err.response?.data?.message || "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -155,9 +97,10 @@ const EmployeeLogin = () => {
     }
   };
 
-  // 🔄 Auto Logout
+  // Auto Logout after inactivity
   const resetTimer = () => {
-    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    if (inactivityTimer.current)
+      clearTimeout(inactivityTimer.current);
 
     inactivityTimer.current = setTimeout(() => {
       toast({
@@ -178,17 +121,18 @@ const EmployeeLogin = () => {
     resetTimer();
 
     return () => {
-      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-      events.forEach((e) => window.removeEventListener(e, resetTimer));
+      if (inactivityTimer.current)
+        clearTimeout(inactivityTimer.current);
+      events.forEach((e) =>
+        window.removeEventListener(e, resetTimer)
+      );
     };
   }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-4">
-      <button
-        onClick={() => navigate("/")}
-        className="absolute top-6 left-6"
-      >
+
+      <button onClick={() => navigate("/")} className="absolute top-6 left-6">
         <img src="/logo.png" alt="logo" className="h-12" />
       </button>
 
@@ -201,40 +145,40 @@ const EmployeeLogin = () => {
           <CardTitle className="text-2xl font-bold">
             {mode === "login"
               ? "Employee Login"
-              : mode === "register"
-              ? "Register Employee"
-              : "Forgot Password"}
+              : mode === "forgot"
+              ? "Forgot Password"
+              : ""}
           </CardTitle>
         </CardHeader>
 
         <CardContent>
           <form
             onSubmit={
-              mode === "login"
-                ? handleLogin
-                : mode === "register"
-                ? handleRegister
-                : handleForgot
+              mode === "login" ? handleLogin : handleForgot
             }
             className="space-y-4"
           >
-            {/* Email */}
+            {/* EMAIL */}
             <div>
               <Label>Email</Label>
               <Input
                 type="email"
                 required
                 value={form.email}
-                onChange={(e) =>
-                  setForm({ ...form, email: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
             </div>
 
-            {/* Password Only on Login */}
+            {/* PASSWORD ONLY IN LOGIN */}
             {mode === "login" && (
               <div>
-                <Label>Password</Label>
+                <Label>
+                  Password <br />
+                  <span className="text-xs text-gray-500">
+                    (Hint: Last 3 digits of EmployeeCode + # + last 4 digits of Phone + @ + Birth Year)
+                  </span>
+                </Label>
+
                 <div className="relative">
                   <Input
                     type={showPassword ? "text" : "password"}
@@ -245,6 +189,7 @@ const EmployeeLogin = () => {
                     }
                     className="pr-10"
                   />
+
                   <span
                     className="absolute right-3 top-3 cursor-pointer"
                     onClick={() => setShowPassword(!showPassword)}
@@ -255,6 +200,7 @@ const EmployeeLogin = () => {
               </div>
             )}
 
+            {/* BUTTON */}
             <div className="flex justify-center">
               <Button className="w-64 bg-blue-700 text-white" disabled={loading}>
                 {loading ? (
@@ -264,18 +210,23 @@ const EmployeeLogin = () => {
                   </>
                 ) : mode === "login" ? (
                   "Sign In"
-                ) : mode === "register" ? (
-                  "Register"
                 ) : (
-                  "Send Request"
+                  "Send Reset Request"
                 )}
               </Button>
             </div>
           </form>
 
-          {/* Mode Switch */}
+          {/* SWITCH */}
           <div className="text-center mt-4">
-            {mode !== "login" && (
+            {mode === "login" ? (
+              <Button
+                className="w-64 bg-blue-700 text-white"
+                onClick={() => setMode("forgot")}
+              >
+                Forgot Password ?
+              </Button>
+            ) : (
               <Button
                 className="w-64 bg-blue-700 text-white"
                 onClick={() => setMode("login")}

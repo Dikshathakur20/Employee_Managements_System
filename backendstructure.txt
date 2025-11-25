@@ -1,0 +1,47 @@
+ems-backend
+│── server.js
+│── .env
+│── package.json
+│── /config
+│     └── db.js
+│── /routes
+│     ├── adminRoutes.js
+│     ├── employeeAuthRoutes.js
+│     ├── employeeRoutes.js
+│     ├── taskRoutes.js
+│     ├── attendanceRoutes.js
+│     ├── departmentRoutes.js
+│     ├── designationRoutes.js
+│     ├── documentRoutes.js
+│     ├── leaveRoutes.js
+│     ├── notificationRoutes.js
+│     └── passwordResetRoutes.js
+│── /controllers
+│     ├── adminController.js
+│     ├── employeeAuthController.js
+│     ├── employeeController.js
+│     ├── taskController.js
+│     ├── attendanceController.js
+│     ├── departmentController.js
+│     ├── designationController.js
+│     ├── documentController.js
+│     ├── leaveController.js
+│     ├── notificationController.js
+│     └── passwordResetController.js
+│── /models
+│     ├── Admin.js
+│     ├── EmployeeAuth.js
+│     ├── Employee.js
+│     ├── Task.js
+│     ├── Attendance.js
+│     ├── Department.js
+│     ├── Designation.js
+│     ├── Document.js
+│     ├── Leave.js
+│     ├── Notification.js
+│     └── PasswordReset.js
+│── /middleware
+│     ├── authMiddleware.js
+│── /utils
+│     ├── supabase.js
+│     └── upload.js  (multer)

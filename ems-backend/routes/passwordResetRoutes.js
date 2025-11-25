@@ -1,5 +1,5 @@
 import express from "express";
-import * as passwordResetController from "../controllers/passwordResetController.js";
+import * as passwordResetController from "../controllers/passwordresetController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { roleMiddleware } from "../middleware/roleMiddleware.js"; // multi-role middleware
 

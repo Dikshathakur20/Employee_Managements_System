@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const axiosClient = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: "https://employee-managements-system-e9mx.vercel.app/",
 });
 
 // Add token to every request

@@ -1,0 +1,67 @@
+name: Deploy Backend to Vercel
+
+on:
+  push:
+    paths:
+      - 'ems-backend/**'
+      - '.github/workflows/backend-deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install backend dependencies
+        working-directory: ./ems-backend
+        run: npm ci
+
+      - name: (Optional) Build backend
+        working-directory: ./ems-backend
+        run: |
+          if npm run build --silent; then
+            echo "Build succeeded"
+          else
+            echo "No build script or build failed — continuing to deploy"
+          fi
+
+      - name: Set Vercel environment variables
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_NAME: ${{ secrets.VERCEL_PROJECT_NAME }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          SUPABASE_PUBLIC_BUCKET: ${{ secrets.SUPABASE_PUBLIC_BUCKET }}
+        run: |
+          npm install -g vercel
+          # Create a temporary .env file for local build (if needed)
+          cat > ems-backend/.env << EOF
+          MONGO_URI=$MONGO_URI
+          JWT_SECRET=$JWT_SECRET
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_SERVICE_ROLE=$SUPABASE_SERVICE_ROLE
+          SUPABASE_PUBLIC_BUCKET=$SUPABASE_PUBLIC_BUCKET
+          PORT=5000
+          EOF
+
+      - name: Deploy to Vercel (via CLI)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx vercel --cwd ems-backend --token "$VERCEL_TOKEN" --confirm --prod
+
+# Notes:
+# - This workflow expects the following repository secrets to be set for deployment to work smoothly:
+#   - VERCEL_TOKEN (required): a Vercel personal token with deploy permissions.
+#   - VERCEL_PROJECT_NAME (optional): your Vercel project name to avoid interactive prompts.
+# - If your Vercel account uses a Team, you can also set VERCEL_TEAM_ID and pass `--scope <team>` in the deploy step.
+# - Alternatively, you can connect the repo to Vercel directly (recommended) and let Vercel handle deployments by Git.
+

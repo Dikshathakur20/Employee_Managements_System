@@ -22,7 +22,7 @@ const app = express();
 
 // ✅ Put this BEFORE routes
 app.use(cors({
-  origin: "https://employee-managements-system-4gxu.vercel.app/",
+  origin: "https://employee-managements-system-4gxu.vercel.app",
   credentials: true
 }));
 

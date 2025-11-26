@@ -38,9 +38,9 @@ jobs:
           fi
 
       # 4. Install dependencies
-      -name: Install dependencies
-      working-directory: ./ems-frontend   # <-- points to folder with package-lock.json
-       run: npm ci
+      - name: Install dependencies
+        working-directory: ./ems-frontend
+        run: npm ci
 
       # 5. Build frontend
       - name: Build frontend

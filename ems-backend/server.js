@@ -21,10 +21,16 @@ connectDB();
 const app = express();
 
 // ✅ Put this BEFORE routes
+// ✅ Universal CORS that works for Vercel + Localhost + Render
 app.use(cors({
-  origin: "https://employee-managements-system-4gxu.vercel.app",
+  origin: [
+    /\.vercel\.app$/,        // Allow ANY Vercel URL (new deployments, previews)
+    "http://localhost:5173", // Allow local dev
+    "http://localhost:3000"
+  ],
   credentials: true
 }));
+
 
 app.use(express.json());
 

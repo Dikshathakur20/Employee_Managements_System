@@ -25,8 +25,8 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-      env:
-        npm_config_cache: ./.npm-cache
+        env:
+          npm_config_cache: ./.npm-cache
 
       # 3. Install dependencies
       - name: Install dependencies

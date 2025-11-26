@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import axiosClient from "@/utils/axiosClient";   // <-- USING THIS NOW
 
-const API_BASE = '/api/admins'; // axiosClient already has baseURL
+const API_BASE = '/admins'; // axiosClient already has baseURL
 
 const Login = () => {
   const [email, setEmail] = useState('');

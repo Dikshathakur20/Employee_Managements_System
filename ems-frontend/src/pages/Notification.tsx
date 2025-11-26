@@ -37,7 +37,9 @@ export default function Notifications() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await axiosClient.get("notifications");
+    const res = await axiosClient.get("notifications/admin");
+
+
         setNotifications(res.data);
       } catch (err: any) {
         toast({

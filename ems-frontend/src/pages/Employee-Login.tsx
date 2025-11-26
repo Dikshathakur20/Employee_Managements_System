@@ -50,7 +50,7 @@ const EmployeeLogin = () => {
     setLoading(true);
 
     try {
-      const res = await axiosClient.post("/api/auth/login", form);
+      const res = await axiosClient.post("/auth/login", form);
 
       localStorage.setItem("employee", JSON.stringify(res.data.employee));
       localStorage.setItem("token", res.data.token);
@@ -78,7 +78,7 @@ const EmployeeLogin = () => {
     setLoading(true);
 
     try {
-      await axiosClient.post("/api/auth/forgot-password", {
+      await axiosClient.post("/auth/forgot-password", {
         email: form.email,
       });
 
@@ -217,7 +217,7 @@ const EmployeeLogin = () => {
             </div>
           </form>
 
-          {/* SWITCH */}
+          {/* SWITCH 
           <div className="text-center mt-4">
             {mode === "login" ? (
               <Button
@@ -234,7 +234,7 @@ const EmployeeLogin = () => {
                 Back to Login
               </Button>
             )}
-          </div>
+          </div>*/}
         </CardContent>
       </Card>
     </div>

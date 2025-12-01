@@ -269,55 +269,85 @@ const handleDelete = async (id: number, employeeCount: number) => {
                 </TableHeader>
 
                 <TableBody>
-                  {displayed.map((d) => (
-                    <TableRow key={d.designation_id}>
-                      <TableCell>{d.designation_title}</TableCell>
+  {loading ? (
+    // 🔵 Skeleton Loading Rows
+    <>
+      {[...Array(rowsPerPage)].map((_, i) => (
+        <TableRow key={i}>
+          
+          {/* Designation Title */}
+          <TableCell>
+            <div className="h-4 w-36 bg-gray-200 animate-pulse rounded"></div>
+          </TableCell>
 
-                      {/* Department → open department filtered view */}
-                      <TableCell>
-                       
-                          {departments.find((x) => x.department_id === d.department_id)?.department_name ||
-                            "Unknown"}
-                        
-                      </TableCell>
+          {/* Department Name */}
+          <TableCell>
+            <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
+          </TableCell>
 
-                      {/* EMP COUNT → open employees filtered by designation (only clickable when > 0) */}
-                      <TableCell className="text-center">
-                        {d.employeeCount && d.employeeCount > 0 ? (
-                          <a
-                            href={`/employees?designation=${d.designation_id}`}
-                            className="text-gray-700 hover: cursor-pointer"
-                          >
-                            {d.employeeCount}
-                          </a>
-                        ) : (
-                          <span className="text-gray-600">{d.employeeCount || 0}</span>
-                        )}
-                      </TableCell>
+          {/* Employee Count */}
+          <TableCell className="text-center">
+            <div className="h-4 w-10 mx-auto bg-gray-200 animate-pulse rounded"></div>
+          </TableCell>
 
-                      <TableCell className="text-end">
-                        <div className="flex justify-end space-x-1">
-                          <Button
-                            size="sm"
-                            className="bg-blue-900 text-white h-7 w-7 p-0"
-                            onClick={() => setEditingDesignation(d)}
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
+          {/* Actions */}
+          <TableCell className="text-end">
+            <div className="flex justify-end gap-2">
+              <div className="h-7 w-7 bg-gray-300 animate-pulse rounded"></div>
+              <div className="h-7 w-7 bg-gray-300 animate-pulse rounded"></div>
+            </div>
+          </TableCell>
 
-                         <Button
-                            size="sm"
-                            className="bg-blue-900 text-white h-7 w-7 p-0"
-                            onClick={() => handleDelete(d.designation_id, d.employeeCount ?? 0)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+        </TableRow>
+      ))}
+    </>
+  ) : (
+    // 🔵 Real Data Rows
+    displayed.map((d) => (
+      <TableRow key={d.designation_id}>
+        <TableCell>{d.designation_title}</TableCell>
 
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+        <TableCell>
+          {departments.find((x) => x.department_id === d.department_id)?.department_name || "Unknown"}
+        </TableCell>
+
+        <TableCell className="text-center">
+          {d.employeeCount && d.employeeCount > 0 ? (
+            <a
+              href={`/employees?designation=${d.designation_id}`}
+              className="text-gray-700 hover:underline cursor-pointer"
+            >
+              {d.employeeCount}
+            </a>
+          ) : (
+            <span className="text-gray-600">{d.employeeCount || 0}</span>
+          )}
+        </TableCell>
+
+        <TableCell className="text-end">
+          <div className="flex justify-end space-x-1">
+            <Button
+              size="sm"
+              className="bg-blue-900 text-white h-7 w-7 p-0"
+              onClick={() => setEditingDesignation(d)}
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+
+            <Button
+              size="sm"
+              className="bg-blue-900 text-white h-7 w-7 p-0"
+              onClick={() => handleDelete(d.designation_id, d.employeeCount ?? 0)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    ))
+  )}
+</TableBody>
+
               </Table>
             </div>
 

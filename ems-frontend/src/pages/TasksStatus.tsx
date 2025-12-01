@@ -7,219 +7,222 @@ import axiosClient from "@/utils/axiosClient"; // Your axios instance
 import { Loader2, ClipboardList, CalendarDays, PlusCircle, X, Search } from "lucide-react";
 
 const TaskStatus = () => {
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showDateModal, setShowDateModal] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [newDueDate, setNewDueDate] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate();
+const [tasks, setTasks] = useState<any[]>([]);
+const [loading, setLoading] = useState(true);
+const [selectionLoading, setSelectionLoading] = useState(false); // ✅ new state
+const [showDateModal, setShowDateModal] = useState(false);
+const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+const [newDueDate, setNewDueDate] = useState("");
+const [searchTerm, setSearchTerm] = useState("");
+const navigate = useNavigate();
 
-  // ✅ Fetch tasks from MongoDB API
-  const fetchTasks = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosClient.get("/tasks"); // Adjust endpoint according to your backend
-      setTasks(res.data); // Assuming backend returns array of tasks
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Failed to load task data.");
-    } finally {
-      setLoading(false);
-    }
-  };
+// ✅ Fetch tasks from MongoDB API
+const fetchTasks = async () => {
+setLoading(true);
+try {
+const res = await axiosClient.get("/tasks");
+setTasks(res.data);
+} catch (err: any) {
+console.error(err);
+toast.error("Failed to load task data.");
+} finally {
+setLoading(false);
+}
+};
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+useEffect(() => {
+fetchTasks();
+}, []);
 
-  // 🧭 Navigate to assign new task
-  const handleNewTask = () => {
-    navigate("/employee-action/assign-task");
-  };
+// 🧭 Navigate to assign new task
+const handleNewTask = () => {
+navigate("/employee-action/assign-task");
+};
 
-  // 🗓️ Open modal for due date change
-  const handleChangeDueDate = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    setShowDateModal(true);
-  };
+// 🗓️ Open modal for due date change with selection loader
+const handleChangeDueDate = (taskId: string) => {
+setSelectionLoading(true);
 
-  // 🗓️ Save due date
-  const handleSaveDate = async () => {
-    if (!newDueDate || !selectedTaskId) return toast.warning("Please select a date");
 
-    try {
-      await axiosClient.put(`/tasks/${selectedTaskId}`, { due_date: newDueDate });
-      toast.success("Due date updated successfully!");
-      fetchTasks();
-      setShowDateModal(false);
-      setNewDueDate("");
-      setSelectedTaskId(null);
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Failed to update due date.");
-    }
-  };
+setTimeout(() => {
+  setSelectedTaskId(taskId);
+  setShowDateModal(true);
+  setSelectionLoading(false);
+}, 200); // very small delay
 
-  // 🔍 Search filter (by employee name or department)
-  const filteredTasks = tasks.filter((task) => {
-    const employeeName = `${task.employee?.first_name || ""} ${task.employee?.last_name || ""}`.toLowerCase();
-    const department = task.employee?.department?.department_name?.toLowerCase() || "";
-    return (
-      employeeName.includes(searchTerm.toLowerCase()) ||
-      department.includes(searchTerm.toLowerCase())
-    );
-  });
 
-  return (
-    <div className="min-h-screen bg-background text-foreground p-6 relative">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold text-blue">
-              <ClipboardList className="h-5 w-5 text-blue-900" />
-              Task Status Board
-            </CardTitle>
+};
 
-            {/* 🔍 Search Bar */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search "
-                className="pl-8 pr-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-900"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-            </div>
-          </div>
-        </CardHeader>
+// 🗓️ Save due date
+const handleSaveDate = async () => {
+if (!newDueDate || !selectedTaskId) return toast.warning("Please select a date");
 
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="h-6 w-6 animate-spin text-white" />
-            </div>
-          ) : filteredTasks.length === 0 ? (
-            <p className="text-center text-gray-500">No tasks found.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border border-gray-200 rounded-lg text-sm bg-white text-gray-800">
-                <thead className="bg-[#001F7A] text-white">
-                  <tr>
-                    <th className="py-2 px-3 text-left">Employee</th>
-                    <th className="py-2 px-3 text-left">Department</th>
-                    <th className="py-2 px-3 text-left">Task Title</th>
-                    <th className="py-2 px-3 text-left">Due Date</th>
-                    <th className="py-2 px-3 text-left">Status</th>
-                    <th className="py-2 px-3 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-  {filteredTasks.map((task) => (
-    <tr key={task._id || task.id} className="border-b hover:bg-gray-50 transition">
-      {/* Employee Name */}
-      <td className="py-2 px-3">
-        {task.employee_name || "Unknown"}
-      </td>
 
-      {/* Department Name */}
-      <td className="py-2 px-3">
-        {task.department_name || "—"}
-      </td>
+try {
+  await axiosClient.put(`/tasks/${selectedTaskId}`, { due_date: newDueDate });
+  toast.success("Due date updated successfully!");
+  fetchTasks();
+  setShowDateModal(false);
+  setNewDueDate("");
+  setSelectedTaskId(null);
+} catch (err: any) {
+  console.error(err);
+  toast.error("Failed to update due date.");
+}
 
-      {/* Task Title */}
-      <td className="py-2 px-3 font-medium">{task.task_title}</td>
 
-      {/* Due Date */}
-      <td className="py-2 px-3">
-        {task.due_date
-          ? new Date(task.due_date).toLocaleDateString("en-IN", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })
-          : "-"}
-      </td>
+};
 
-      {/* Status */}
-      <td
-        className={`py-2 px-3 font-semibold ${
-          task.status === "Completed"
-            ? "text-green-600"
-            : task.status === "In Progress"
-            ? "text-yellow-600"
-            : "text-red-600"
-        }`}
-      >
-        {task.status}
-      </td>
+// 🔍 Search filter
+const filteredTasks = tasks.filter((task) => {
+const employeeName = `${task.employee?.first_name || ""} ${task.employee?.last_name || ""}`.toLowerCase();
+const department = task.employee?.department?.department_name?.toLowerCase() || "";
+return (
+employeeName.includes(searchTerm.toLowerCase()) ||
+department.includes(searchTerm.toLowerCase())
+);
+});
 
-      {/* Actions */}
-      <td className="py-2 px-3 flex justify-center gap-2">
-        <Button
-          size="sm"
-          className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
-          onClick={() => handleChangeDueDate(task._id || task.id)}
-        >
-          <CalendarDays className="h-3.5 w-3.5 mr-1" />
-          Change Due Date
-        </Button>
-        <Button
-          size="sm"
-          className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
-          onClick={handleNewTask}
-        >
-          <PlusCircle className="h-3.5 w-3.5 mr-1" />
-          New Task
-        </Button>
-      </td>
-    </tr>
-  ))}
-</tbody>
+return ( <div className="min-h-screen bg-background text-foreground p-6 relative"> <Card> <CardHeader> <div className="flex justify-between items-center"> <CardTitle className="flex items-center gap-2 text-xl font-semibold text-blue"> <ClipboardList className="h-5 w-5 text-blue-900" />
+Task Status Board </CardTitle>
 
-              </table>
+```
+        {/* 🔍 Search Bar */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search "
+            className="pl-8 pr-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-900"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+        </div>
+      </div>
+    </CardHeader>
+
+    <CardContent>
+      {loading ? (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-white" />
+        </div>
+      ) : filteredTasks.length === 0 ? (
+        <p className="text-center text-gray-500">No tasks found.</p>
+      ) : (
+        <div className="relative overflow-x-auto">
+          {/* 🔵 Selection Loader Overlay */}
+          {selectionLoading && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-900" />
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* 🗓️ Date Picker Modal */}
-      {showDateModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-[90%] max-w-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-[#001F7A]">Select New Due Date</h3>
-              <button onClick={() => setShowDateModal(false)}>
-                <X className="h-5 w-5 text-gray-500 hover:text-gray-700" />
-              </button>
-            </div>
-            <input
-              type="date"
-              value={newDueDate}
-              onChange={(e) => setNewDueDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-md p-2 mb-4"
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowDateModal(false)}
-                className="bg-blue-900 hover:bg-blue-900 text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                className="bg-blue-900 hover:bg-blue-900 text-white"
-                onClick={handleSaveDate}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
+          <table
+            className={`w-full border border-gray-200 rounded-lg text-sm bg-white text-gray-800 ${
+              selectionLoading ? "pointer-events-none opacity-60" : ""
+            }`}
+          >
+            <thead className="bg-[#001F7A] text-white">
+              <tr>
+                <th className="py-2 px-3 text-left">Employee</th>
+                <th className="py-2 px-3 text-left">Department</th>
+                <th className="py-2 px-3 text-left">Task Title</th>
+                <th className="py-2 px-3 text-left">Due Date</th>
+                <th className="py-2 px-3 text-left">Status</th>
+                <th className="py-2 px-3 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTasks.map((task) => (
+                <tr key={task._id || task.id} className="border-b hover:bg-gray-50 transition">
+                  <td className="py-2 px-3">{task.employee_name || "Unknown"}</td>
+                  <td className="py-2 px-3">{task.department_name || "—"}</td>
+                  <td className="py-2 px-3 font-medium">{task.task_title}</td>
+                  <td className="py-2 px-3">
+                    {task.due_date
+                      ? new Date(task.due_date).toLocaleDateString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : "-"}
+                  </td>
+                  <td
+                    className={`py-2 px-3 font-semibold ${
+                      task.status === "Completed"
+                        ? "text-green-600"
+                        : task.status === "In Progress"
+                        ? "text-yellow-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {task.status}
+                  </td>
+                  <td className="py-2 px-3 flex justify-center gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
+                      onClick={() => handleChangeDueDate(task._id || task.id)}
+                    >
+                      <CalendarDays className="h-3.5 w-3.5 mr-1" />
+                      Change Due Date
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
+                      onClick={handleNewTask}
+                    >
+                      <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                      New Task
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
+    </CardContent>
+  </Card>
+
+  {/* 🗓️ Date Picker Modal */}
+  {showDateModal && (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-[90%] max-w-sm">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-[#001F7A]">Select New Due Date</h3>
+          <button onClick={() => setShowDateModal(false)}>
+            <X className="h-5 w-5 text-gray-500 hover:text-gray-700" />
+          </button>
+        </div>
+        <input
+          type="date"
+          value={newDueDate}
+          onChange={(e) => setNewDueDate(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-2 mb-4"
+        />
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowDateModal(false)}
+            className="bg-blue-900 hover:bg-blue-900 text-white"
+          >
+            Cancel
+          </Button>
+          <Button
+            className="bg-blue-900 hover:bg-blue-900 text-white"
+            onClick={handleSaveDate}
+          >
+            Save
+          </Button>
+        </div>
+      </div>
     </div>
-  );
+  )}
+</div>
+
+
+);
 };
 
 export default TaskStatus;

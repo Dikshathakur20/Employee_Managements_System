@@ -219,77 +219,110 @@ const Departments = () => {
                     <TableHead className="text-end">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
+                  <TableBody>
+  {loading ? (
+    <>
+      {[...Array(rowsPerPage)].map((_, i) => (
+        <TableRow key={i}>
+          {/* Department Name */}
+          <TableCell>
+            <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
+          </TableCell>
 
-                <TableBody>
-                  {displayedDepartments.map((d) => (
-                    <TableRow key={d.department_id}>
-  {/* Department Name → Employees filtered by dept */}
-  <TableCell>
-      {d.department_name}
-  </TableCell>
+          {/* Designations */}
+          <TableCell className="text-center">
+            <div className="h-4 w-10 bg-gray-200 animate-pulse rounded mx-auto"></div>
+          </TableCell>
 
-  <TableCell className="text-center">
-  {d.total_designations > 0 ? (
-    <a
-      href={`/designations?department=${d.department_id}`}
-      className="text-gray-700 hover: text-blue-700  cursor-pointer"
-    >
-      {d.total_designations}
-    </a>
+          {/* Employees */}
+          <TableCell className="text-center">
+            <div className="h-4 w-10 bg-gray-200 animate-pulse rounded mx-auto"></div>
+          </TableCell>
+
+          {/* Action Buttons */}
+          <TableCell className="text-end">
+            <div className="flex justify-end gap-2">
+              <div className="h-7 w-7 bg-gray-300 animate-pulse rounded"></div>
+              <div className="h-7 w-7 bg-gray-300 animate-pulse rounded"></div>
+              <div className="h-7 w-7 bg-gray-300 animate-pulse rounded"></div>
+            </div>
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
   ) : (
-    <span className="text-gray-500">{d.total_designations}</span>
+    displayedDepartments.map((d) => (
+      <TableRow key={d.department_id}>
+        <TableCell>{d.department_name}</TableCell>
+
+        <TableCell className="text-center">
+          {d.total_designations > 0 ? (
+            <a
+              href={`/designations?department=${d.department_id}`}
+              className="text-gray-700 hover:text-blue-700 cursor-pointer"
+            >
+              {d.total_designations}
+            </a>
+          ) : (
+            <span className="text-gray-500">{d.total_designations}</span>
+          )}
+        </TableCell>
+
+        <TableCell className="text-center">
+          {d.total_employees > 0 ? (
+            <a
+              href={`/employees?department=${d.department_id}`}
+              className="text-gray-700 hover:text-blue-700 cursor-pointer"
+            >
+              {d.total_employees}
+            </a>
+          ) : (
+            <span className="text-gray-500">{d.total_employees}</span>
+          )}
+        </TableCell>
+
+        <TableCell className="text-end">
+          <div className="flex justify-end space-x-1">
+            <Button
+              size="sm"
+              className="bg-blue-900 text-white h-7 w-7 p-0"
+              onClick={async () => {
+                await fetchDepartmentDesignations(d.department_id);
+                setViewingDepartment(d);
+              }}
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+
+            <Button
+              size="sm"
+              className="bg-blue-900 text-white h-7 w-7 p-0"
+              onClick={() => setEditingDepartment(d)}
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+
+            <Button
+              size="sm"
+              className="bg-blue-900 text-white h-7 w-7 p-0"
+              onClick={() =>
+                handleDelete(
+                  d.department_id,
+                  d.total_employees ?? 0,
+                  d.total_designations ?? 0
+                )
+              }
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    ))
   )}
-</TableCell>
+</TableBody>
 
-<TableCell className="text-center">
-  {d.total_employees > 0 ? (
-    <a
-      href={`/employees?department=${d.department_id}`}
-      className="text-gray-700 hover: text-blue-700  cursor-pointer"
-    >
-      {d.total_employees}
-    </a>
-  ) : (
-    <span className="text-gray-500">{d.total_employees}</span>
-  )}
-</TableCell>
-
-
-  {/* Actions (unchanged) */}
-  <TableCell className="text-end">
-    <div className="flex justify-end space-x-1">
-      <Button
-        size="sm"
-        className="bg-blue-900 text-white h-7 w-7 p-0"
-        onClick={async () => {
-          await fetchDepartmentDesignations(d.department_id);
-          setViewingDepartment(d);
-        }}
-      >
-        <Eye className="h-3.5 w-3.5" />
-      </Button>
-
-      <Button
-        size="sm"
-        className="bg-blue-900 text-white h-7 w-7 p-0"
-        onClick={() => setEditingDepartment(d)}
-      >
-        <Edit className="h-3.5 w-3.5" />
-      </Button>
-
-    <Button
-  size="sm"
-  className="bg-blue-900 text-white h-7 w-7 p-0"
-  onClick={() => handleDelete(d.department_id, d.total_employees ?? 0, d.total_designations ?? 0)}
->
-  <Trash2 className="h-3.5 w-3.5" />
-</Button>
-
-    </div>
-  </TableCell>
-</TableRow>
-                  ))}
-                </TableBody>
+                
               </Table>
             </div>
 

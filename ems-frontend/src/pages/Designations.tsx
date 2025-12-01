@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // Dialog Components
-import { NewDesignationDialog } from "@/components/dashboard/NewDesignationDialog";
+import  NewDesignationDialog  from "@/components/dashboard/NewDesignationDialog";
 import { EditDesignationDialog } from "@/components/dashboard/EditDesignationDialog";
 
 interface Designation {
@@ -34,7 +34,9 @@ interface Designation {
   designation_title: string;
   department_id: number;
   employeeCount?: number;
+  total_employees?: number;  // new
 }
+
 
 interface Department {
   department_id: number;
@@ -87,45 +89,55 @@ export default function Designations() {
   };
 
   // Fetch designations + employee count
-  const fetchDesignations = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosClient.get("/designations");
-      let list: Designation[] = res.data || [];
+ const fetchDesignations = async () => {
+  setLoading(true);
+  try {
+    const res = await axiosClient.get("/designations");
+    let list: Designation[] = res.data || [];
 
-      if (filterDept) {
-        list = list.filter((d: Designation) => d.department_id === Number(filterDept));
-      }
-
-      // Fetch employee count per designation
-      const complete = await Promise.all(
-        list.map(async (d: Designation) => {
-          // backend endpoint returns employees array when filtered by designation_id
-          const empRes = await axiosClient.get(`/employees?designation_id=${d.designation_id}`);
-          return { ...d, employeeCount: Array.isArray(empRes.data) ? empRes.data.length : 0 };
-        })
-      );
-
-      setDesignations(complete);
-    } catch (err) {
-      toast({ title: "Error", description: "Unable to fetch designations", variant: "destructive" });
-    } finally {
-      setLoading(false);
+    if (filterDept) {
+      list = list.filter((d: Designation) => d.department_id === Number(filterDept));
     }
-  };
+
+    // No extra requests. Backend already sends employee count.
+    const prepared = list.map((d) => ({
+      ...d,
+      employeeCount: d.total_employees ?? 0
+    }));
+
+    setDesignations(prepared);
+  } catch (err) {
+    toast({ title: "Error", description: "Unable to fetch designations", variant: "destructive" });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Delete designation
-  const handleDelete = async (id: number) => {
-    try {
-      if (!confirm("Are you sure you want to delete this designation?")) return;
-
-      await axiosClient.delete(`/designations/${id}`);
-      toast({ title: "Deleted", description: "Designation removed successfully" });
-      fetchDesignations();
-    } catch {
-      toast({ title: "Error", description: "Error while deleting designation.", variant: "destructive" });
+  // Delete designation
+const handleDelete = async (id: number, employeeCount: number) => {
+  try {
+    // Prevent deletion if employees are linked
+    if (employeeCount > 0) {
+      toast({
+        title: "Cannot delete",
+        description: "This designation has employees assigned to it.",
+        variant: "destructive",
+      });
+      return;
     }
-  };
+
+    if (!confirm("Are you sure you want to delete this designation?")) return;
+
+    await axiosClient.delete(`/designations/${id}`);
+    toast({ title: "Deleted", description: "Designation removed successfully" });
+    fetchDesignations();
+  } catch {
+    toast({ title: "Error", description: "Error while deleting designation.", variant: "destructive" });
+  }
+};
+
 
   // Filtering
   const filtered = designations.filter((d) =>
@@ -274,7 +286,7 @@ export default function Designations() {
                         {d.employeeCount && d.employeeCount > 0 ? (
                           <a
                             href={`/employees?designation=${d.designation_id}`}
-                            className="text-blue-700 hover:underline cursor-pointer"
+                            className="text-gray-700 hover: cursor-pointer"
                           >
                             {d.employeeCount}
                           </a>
@@ -293,13 +305,14 @@ export default function Designations() {
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
 
-                          <Button
+                         <Button
                             size="sm"
                             className="bg-blue-900 text-white h-7 w-7 p-0"
-                            onClick={() => handleDelete(d.designation_id)}
+                            onClick={() => handleDelete(d.designation_id, d.employeeCount ?? 0)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
+
                         </div>
                       </TableCell>
                     </TableRow>

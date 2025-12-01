@@ -3,10 +3,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { toast } from "react-toastify";
 import { ChevronDown } from "lucide-react";
 import axiosClient from "../../utils/axiosClient";
+
+/* ---------------- Helper Date Functions ---------------- */
+
+// Convert YYYY-MM-DD → DD/MM/YYYY
+const formatToDisplayDate = (dateStr: string) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
 
 const MyProfile: React.FC = () => {
   const [employee, setEmployee] = useState<any>(null);
@@ -29,9 +48,16 @@ const MyProfile: React.FC = () => {
       try {
         const res = await axiosClient.get(`/employees/${employeeId}`);
 
-        setEmployee(res.data);
-        setFormData(res.data);
+        // Ensure emergency fields always exist (important)
+        const safeData = {
+          ...res.data,
+          emergency_contact_name: res.data.emergency_contact_name ?? "",
+          emergency_contact_phone: res.data.emergency_contact_phone ?? "",
+          emergency_contact_relation: res.data.emergency_contact_relation ?? "",
+        };
 
+        setEmployee(safeData);
+        setFormData(safeData);
       } catch (err) {
         console.error("Error fetching employee:", err);
         toast.error("Failed to load profile");
@@ -43,15 +69,17 @@ const MyProfile: React.FC = () => {
 
   // ---------------- ON INPUT CHANGE ----------------
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const { name, value } = e.target;
+  let newValue = value;
 
-    // Limit phone numbers to 10 digits
-    if (name.includes("phone")) {
-      if (!/^\d{0,10}$/.test(value)) return;
-    }
+  // Limit phone numbers to 10 digits
+  if (name.includes("phone")) {
+    newValue = value.replace(/\D/g, "").slice(0, 10); // remove non-digits & max 10
+  }
 
-    setFormData({ ...formData, [name]: value });
-  };
+  setFormData({ ...formData, [name]: newValue });
+  setEmployee({ ...employee, [name]: newValue }); // UPDATE employee state immediately
+};
 
   // ---------------- FILE UPLOAD ----------------
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,22 +96,27 @@ const MyProfile: React.FC = () => {
 
   // ---------------- SAVE CHANGES ----------------
   const handleSave = async () => {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const res = await axiosClient.put(`/employees/${employeeId}`, formData);
+    // 1️⃣ Send updated data to backend
+    const res = await axiosClient.put(`/employees/${employeeId}`, formData);
 
-      setEmployee(res.data.employee);
-      setIsEditing(false);
-      toast.success("Profile updated successfully!");
+    // 2️⃣ Update the employee state with backend response
+    setEmployee(res.data.employee);
 
-    } catch (err) {
-      console.error("Error updating profile:", err);
-      toast.error("Failed to update profile.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 3️⃣ Exit edit mode
+    setIsEditing(false);
+
+    toast.success("Profile updated successfully!");
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    toast.error("Failed to update profile.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (!employee) {
     return (
@@ -96,7 +129,6 @@ const MyProfile: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 flex justify-center">
       <Card className="w-full max-w-3xl shadow-sm border rounded-2xl overflow-hidden">
-
         {/* ---------------- HEADER ---------------- */}
         <div
           className="bg-gradient-to-r text-white px-6 py-8 flex flex-col items-center"
@@ -115,7 +147,12 @@ const MyProfile: React.FC = () => {
             {isEditing && (
               <label className="absolute bottom-1 right-1 bg-white text-black text-xs px-2 py-1 rounded cursor-pointer">
                 Change
-                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
               </label>
             )}
           </div>
@@ -124,14 +161,11 @@ const MyProfile: React.FC = () => {
             {employee.first_name} {employee.last_name}
           </h1>
 
-        {/* <p className="text-sm text-blue-600">
-  {employee.designation_title || "Not Assigned"} • {employee.department_name || "No Department"}
-</p>*/}
-
-
-
           {!isEditing ? (
-            <Button className="mt-4 bg-blue-900 text-white" onClick={() => setIsEditing(true)}>
+            <Button
+              className="mt-4 bg-blue-900 text-white"
+              onClick={() => setIsEditing(true)}
+            >
               Edit Profile
             </Button>
           ) : (
@@ -152,7 +186,6 @@ const MyProfile: React.FC = () => {
 
         {/* ---------------- CONTENT ---------------- */}
         <CardContent className="p-6 space-y-4">
-
           {/* BASIC INFO */}
           <Section title="Basic Information">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -182,10 +215,24 @@ const MyProfile: React.FC = () => {
                 label="Date of Birth"
                 name="date_of_birth"
                 type="date"
-                value={formData.date_of_birth}
-                viewValue={employee.date_of_birth}
+                max="2007-12-31"
+                value={
+                  isEditing
+                    ? formData.date_of_birth
+                      ? new Date(formData.date_of_birth)
+                          .toISOString()
+                          .split("T")[0]
+                      : ""
+                    : formatToDisplayDate(employee.date_of_birth)
+                }
+                viewValue={formatToDisplayDate(employee.date_of_birth)}
                 isEditing={isEditing}
-                onChange={handleChange}
+                onChange={(e: any) => {
+                  setFormData({
+                    ...formData,
+                    date_of_birth: e.target.value,
+                  });
+                }}
               />
 
               <InputBlock
@@ -197,17 +244,6 @@ const MyProfile: React.FC = () => {
                 isEditing={isEditing}
                 onChange={handleChange}
               />
-
-              {/* VIEW-ONLY
-              <div>
-                <Label className="text-sm font-medium">Department</Label>
-                <p className="text-gray-600">{employee.department_name || "—"}</p>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium">Designation</Label>
-                <p className="text-gray-600">{employee.designation_title || "—"}</p>
-              </div>*/}
             </div>
           </CollapsibleSection>
 
@@ -240,7 +276,6 @@ const MyProfile: React.FC = () => {
               />
             </div>
           </CollapsibleSection>
-
         </CardContent>
       </Card>
     </div>
@@ -257,7 +292,9 @@ const CollapsibleSection = ({ title, children }: any) => (
       {title}
       <ChevronDown className="h-4 w-4" />
     </CollapsibleTrigger>
-    <CollapsibleContent className="mt-3 text-sm">{children}</CollapsibleContent>
+    <CollapsibleContent className="mt-3 text-sm">
+      {children}
+    </CollapsibleContent>
   </Collapsible>
 );
 
@@ -268,12 +305,29 @@ const Section = ({ title, children }: any) => (
   </div>
 );
 
-const InputBlock = ({ label, name, value, viewValue, isEditing, onChange, type = "text", full = false }: any) => (
+/* FINAL FIXED INPUTBLOCK */
+const InputBlock = ({
+  label,
+  name,
+  value,
+  viewValue,
+  isEditing,
+  onChange,
+  type = "text",
+  full = false,
+  max,
+}: any) => (
   <div className={full ? "md:col-span-2" : ""}>
     <Label className="text-sm font-medium">{label}</Label>
 
     {isEditing ? (
-      <Input name={name} type={type} value={value || ""} onChange={onChange} />
+      <Input
+        name={name}
+        type={type}
+        value={value ?? ""}   // IMPORTANT FIX
+        onChange={onChange}
+        max={max}
+      />
     ) : (
       <p className="text-gray-600">{viewValue || "—"}</p>
     )}

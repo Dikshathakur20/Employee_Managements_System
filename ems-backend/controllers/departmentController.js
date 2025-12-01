@@ -15,70 +15,87 @@ export const getDepartmentCount = async (req, res) => {
 // Add new department
 export const addDepartment = async (req, res) => {
   try {
-    const { department_id, department_name, location } = req.body;
+    const { department_name, location } = req.body;
 
-    const existingDept = await Department.findOne({ department_id });
-    if (existingDept) {
-      return res.status(400).json({ message: "Department ID already exists" });
-    }
+    const department = new Department({
+      department_name,
+      location: location || null
+    });
 
-    const department = new Department({ department_id, department_name, location });
     await department.save();
 
-    res.status(201).json({ message: "Department added successfully", department });
+    res.status(201).json({
+      message: "Department added successfully",
+      department
+    });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
 
 // Get all departments
 export const getAllDepartments = async (req, res) => {
   try {
-    const departments = await Department.find().sort({ department_name: 1 });
+    const departments = await Department.aggregate([
+      {
+        $lookup: {
+          from: "designations",
+          localField: "department_id",
+          foreignField: "department_id",
+          as: "designations"
+        }
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "department_id",
+          foreignField: "department_id",
+          as: "employees"
+        }
+      },
+      {
+        $project: {
+          department_id: 1,
+          department_name: 1,
+          location: 1,
+          total_designations: { $size: "$designations" },
+          total_employees: { $size: "$employees" }
+        }
+      },
+      { $sort: { department_name: 1 } }
+    ]);
 
-    const enriched = await Promise.all(
-      departments.map(async (dept) => {
-        const [designationCount, employeeCount] = await Promise.all([
-          Designation.countDocuments({ department_id: dept.department_id }),
-          Employee.countDocuments({ department_id: dept.department_id }),
-        ]);
-
-        return {
-          department_id: dept.department_id,
-          department_name: dept.department_name,
-          location: dept.location,
-          total_designations: designationCount,
-          total_employees: employeeCount,
-        };
-      })
-    );
-
-    res.status(200).json(enriched);
+    res.json(departments);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
 
 export const getDesignationsByDepartment = async (req, res) => {
   try {
-    const { id } = req.params;
-    const designations = await Designation.find({ department_id: Number(id) });
+    const deptId = Number(req.params.id);
 
-    res.status(200).json(designations);
+    const list = await Designation.find({ department_id: deptId });
+
+    res.json(list);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
 
 // Get department by ID
 export const getDepartmentById = async (req, res) => {
   try {
-    const { department_id } = req.params;
-    const department = await Department.findOne({ department_id });
+    const dept = await Department.findOne({
+      department_id: Number(req.params.department_id)
+    });
 
-    if (!department) return res.status(404).json({ message: "Department not found" });
+    if (!dept) return res.status(404).json({ message: "Department not found" });
 
-    res.status(200).json(department);
+    res.json(dept);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
@@ -87,34 +104,33 @@ export const getDepartmentById = async (req, res) => {
 // Update department
 export const updateDepartment = async (req, res) => {
   try {
-    const { department_id } = req.params;
-    const { department_name, location } = req.body;
-
-    const department = await Department.findOneAndUpdate(
-      { department_id },
-      { department_name, location },
+    const dept = await Department.findOneAndUpdate(
+      { department_id: Number(req.params.department_id) },
+      req.body,
       { new: true }
     );
 
-    if (!department) return res.status(404).json({ message: "Department not found" });
+    if (!dept) return res.status(404).json({ message: "Department not found" });
 
-    res.status(200).json({ message: "Department updated", department });
+    res.json({ message: "Updated successfully", department: dept });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
 
 // Delete department
 export const deleteDepartment = async (req, res) => {
   try {
-    const { department_id } = req.params;
+    const dept = await Department.findOneAndDelete({
+      department_id: Number(req.params.department_id)
+    });
 
-    const department = await Department.findOneAndDelete({ department_id });
+    if (!dept) return res.status(404).json({ message: "Department not found" });
 
-    if (!department) return res.status(404).json({ message: "Department not found" });
-
-    res.status(200).json({ message: "Department deleted successfully" });
+    res.json({ message: "Deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+

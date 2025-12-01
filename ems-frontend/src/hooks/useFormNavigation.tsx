@@ -25,65 +25,61 @@ export const useFormNavigation = () => {
       const index = focusable.indexOf(target);
 
       // -----------------------------
-      // Enter Key
+      // ENTER KEY
       // -----------------------------
       if (e.key === "Enter") {
         e.preventDefault();
 
-        // File input special case
+        // FILE INPUT SPECIAL CASE
         if (target.tagName === "INPUT" && (target as HTMLInputElement).type === "file") {
           const fileInput = target as HTMLInputElement;
-          fileInput.click();
           const submitButton = form.querySelector("button[type='submit']") as HTMLButtonElement | null;
-          if (submitButton) {
-            const handleChange = () => {
-              submitButton.focus();
-              fileInput.removeEventListener("change", handleChange);
-            };
-            fileInput.addEventListener("change", handleChange);
+
+          if (fileInput.files && fileInput.files.length > 0) {
+            // FILE EXISTS → move to next input
+            const next = focusable[index + 1];
+            if (next) next.focus();
+          } else {
+            // NO FILE → trigger submit button
+            submitButton?.click();
           }
           return;
         }
 
-        // Custom SelectTrigger
+        // Custom Shadcn SelectTrigger
         if (target.getAttribute("role") === "button") {
           const next = focusable[index + 1];
           if (next) next.focus();
           return;
         }
 
-        // Regular inputs
-        const next = focusable[index + 1];
-        if (next) {
-          next.focus();
-        } else {
-          // Last input → submit form automatically
-          const submitButton = form.querySelector("button[type='submit']") as HTMLButtonElement | null;
-          if (submitButton) {
-            submitButton.click();
-          } else {
-            form.submit();
-          }
-        }
+        // Default: submit the form
+        const submitButton = form.querySelector("button[type='submit']") as HTMLButtonElement | null;
+        if (submitButton) submitButton.click();
+        else form.submit();
+
+        return;
       }
 
       // -----------------------------
-      // Arrow keys navigation
+      // Arrow Navigation
       // -----------------------------
       if (["ArrowDown", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
         const next = focusable[index + 1];
         if (next) next.focus();
+        return;
       }
 
       if (["ArrowUp", "ArrowLeft"].includes(e.key)) {
         e.preventDefault();
         const prev = focusable[index - 1];
         if (prev) prev.focus();
+        return;
       }
 
       // -----------------------------
-      // Escape → focus Cancel
+      // ESC → focus Cancel button
       // -----------------------------
       if (e.key === "Escape") {
         e.preventDefault();
@@ -97,6 +93,7 @@ export const useFormNavigation = () => {
       }
     };
 
+    // Focus first input when form mounts (for dialogs/modals)
     const focusFirstInput = () => {
       const forms = document.querySelectorAll("form");
       forms.forEach((form) => {
@@ -108,8 +105,6 @@ export const useFormNavigation = () => {
     };
 
     document.addEventListener("keydown", handleKeyDown);
-
-    // Focus first input on mount (useful for modals/dialogs)
     focusFirstInput();
 
     return () => document.removeEventListener("keydown", handleKeyDown);

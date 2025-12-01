@@ -73,6 +73,7 @@ const AdminInactivityHandler = ({ children }: { children: React.ReactNode }) => 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLogout = () => {
+     if (location.pathname.startsWith("/employee")) return;
     logout();
     navigate("/admin-login", { replace: true });
   };

@@ -7,6 +7,8 @@ const router = express.Router();
 
 
 router.get("/count", protect, leaveController.getLeaveCount);
+router.get("/count/pending", protect, leaveController.getPendingLeaveCount);
+
 // APPLY LEAVE --> Employee only
 router.post("/", protect, roleMiddleware(["employee"]), leaveController.applyLeave);
 

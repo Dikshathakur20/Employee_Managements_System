@@ -7,24 +7,81 @@ export const addAttendance = async (req, res) => {
   try {
     const { employee_id, date, check_in, check_out, status } = req.body;
 
-    // Normalize the date to UTC midnight (just the day for monthly filtering)
-    const attendanceDate = new Date(date);
-    attendanceDate.setUTCHours(0, 0, 0, 0);
+    // Convert provided date to IST
+    const localDate = new Date(
+      new Date(date).toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
+    localDate.setHours(0, 0, 0, 0);
 
+    // Prepare start & end of IST day (for duplicate check)
+    const start = new Date(localDate);
+    const end = new Date(localDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Check duplicate
+    const existing = await Attendance.findOne({
+      employee_id,
+      date: { $gte: start, $lte: end },
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        message: "You already checked in today",
+      });
+    }
+
+    // Create new attendance
     const attendance = new Attendance({
       employee_id,
-      date: attendanceDate,
+      date: localDate,
       check_in: check_in ? new Date(check_in) : undefined,
       check_out: check_out ? new Date(check_out) : undefined,
       status: status || "Present",
     });
 
     await attendance.save();
-    res.status(201).json({ message: "Attendance added successfully", attendance });
+    res.status(201).json(attendance);
+
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+
+
+export const getTodaysAttendance = async (req, res) => {
+  try {
+    const employee_id = Number(req.params.employee_id);
+
+    // Get IST date at current moment
+    const nowIST = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
+
+    // Start of IST day
+    const start = new Date(nowIST);
+    start.setHours(0, 0, 0, 0);
+
+    // End of IST day
+    const end = new Date(nowIST);
+    end.setHours(23, 59, 59, 999);
+
+    // Find today's attendance using range
+    const record = await Attendance.findOne({
+      employee_id,
+      date: { $gte: start, $lte: end }
+    });
+
+    res.json(record || null);
+
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+
+
+
 
 // =======================
 // Get all attendance records
@@ -120,11 +177,13 @@ export const updateAttendance = async (req, res) => {
     if (!attendance)
       return res.status(404).json({ message: "Attendance not found" });
 
-    res.status(200).json({ message: "Attendance updated", attendance });
+    res.status(200).json(attendance);
+
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
 
 // =======================
 // Delete attendance

@@ -24,4 +24,10 @@ const taskSchema = new mongoose.Schema({
   },
 }, { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } });
 
+taskSchema.index({ employee_id: 1 });
+taskSchema.index({ status: 1 });
+taskSchema.index({ due_date: 1 });
+taskSchema.index({ created_at: -1 });
+
+
 export default mongoose.model("Task", taskSchema);

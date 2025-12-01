@@ -38,9 +38,10 @@ function MonthlyReport() {
     if (!employeeId) return;
     setLoading(true);
     try {
-      const res = await axiosClient.get<AttendanceRecord[]>(
-        `/attendance/${employeeId}?month=${month}&year=${year}`
-      );
+    const res = await axiosClient.get<AttendanceRecord[]>(
+  `/attendance/employee/${employeeId}?month=${month}&year=${year}`
+);
+
       setRecords(res.data);
     } catch (err) {
       console.error("Error fetching attendance:", err);

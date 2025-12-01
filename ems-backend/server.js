@@ -25,14 +25,14 @@ const app = express();
 app.use(cors({
   origin: [
     /\.vercel\.app$/,        // Allow ANY Vercel URL (new deployments, previews)
-    "http://localhost:5173", // Allow local dev
-    "http://localhost:3000"
+    "http://localhost:8080", // Allow local de"
   ],
   credentials: true
 }));
 
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-app.use(express.json());
 
 // ROUTES
 app.use("/api/admins", adminRoutes);

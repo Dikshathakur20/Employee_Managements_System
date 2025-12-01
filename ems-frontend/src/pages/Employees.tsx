@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 
-const API_BASE = "http://localhost:5000/api";
+
 
 interface Employee {
   employee_id: number;
@@ -431,9 +431,8 @@ const Employees = () => {
                         <TableCell className="px-2 py-1 text-sm">
                           {/* Interlinking to department show page (A: /departments/:id) */}
                           {emp.department_id ? (
-                            <Link to={`/departments/${emp.department_id}`} className="hover:underline text-blue-800">
                               <Badge variant="secondary" className="px-2 py-0 text-xs font-medium leading-tight min-h-[22px]">{getDepartmentName(emp.department_id)}</Badge>
-                            </Link>
+                            
                           ) : (
                             <Badge variant="secondary" className="px-2 py-0 text-xs font-medium leading-tight min-h-[22px]">Not Assigned</Badge>
                           )}
@@ -441,9 +440,9 @@ const Employees = () => {
 
                         <TableCell className="px-2 py-1 text-sm">
                           {emp.designation_id ? (
-                            <Link to={`/designations/${emp.designation_id}`} className="hover:underline text-blue-800">
+                            
                               <Badge variant="secondary" className="px-2 py-0 text-xs font-medium leading-tight min-h-[22px]">{getDesignationTitle(emp.designation_id)}</Badge>
-                            </Link>
+                            
                           ) : (
                             <Badge variant="secondary" className="px-2 py-0 text-xs font-medium leading-tight min-h-[22px]">Not Assigned</Badge>
                           )}
@@ -556,13 +555,16 @@ const Employees = () => {
         onSuccess={fetchData}
       />
 
-      <NewEmployeeDialog
-        open={showNewDialog}
-        onOpenChange={(open) => setShowNewDialog(open)}
-        onSuccess={() => { fetchData(); setSortOption("id-desc"); }}
-        onEmployeeAdded={handleNewEmployee}
-      />
+     <NewEmployeeDialog
+  open={showNewDialog}
+  onOpenChange={(open) => setShowNewDialog(open)}
 
+  onEmployeeAdded={async () => {
+    await fetchData();  // <-- Load correct full list from backend
+    toast.success("Employee added successfully!");
+    setShowNewDialog(false);
+  }}
+/>
       <Dialog open={!!viewingEmployee} onOpenChange={(open) => !open && setViewingEmployee(null)}>
         <DialogContent className="w-full max-w-lg sm:max-w-xl md:max-w-2xl bg-blue-50 p-6 rounded-xl" style={{ background: "linear-gradient(-45deg, #ffffff, #c9d0fb)" }}>
           <DialogHeader>
@@ -585,9 +587,9 @@ const Employees = () => {
                 <p><span className="font-semibold">Address:</span> {viewingEmployee.address || "-"}</p>
                 <div className="mt-4 border-t pt-2">
                   <p className="font-semibold text-[#001F7A]">Emergency Contact</p>
-                  <p><span className="font-semibold">Name:</span> {viewingEmployee.emergency_contact_name || "-"}</p>
-                  <p><span className="font-semibold">Relation:</span> {viewingEmployee.emergency_contact_relation || "-"}</p>
-                  <p><span className="font-semibold">Phone:</span> {viewingEmployee.emergency_contact_phone || "-"}</p>
+                  <p><span className="font-semibold">Name:</span> {viewingEmployee.emergency_contact_name || "N/A"}</p>
+                  <p><span className="font-semibold">Relation:</span> {viewingEmployee.emergency_contact_relation || "N/A"}</p>
+                  <p><span className="font-semibold">Phone:</span> {viewingEmployee.emergency_contact_phone || "N/A"}</p>
                 </div>
               </div>
 

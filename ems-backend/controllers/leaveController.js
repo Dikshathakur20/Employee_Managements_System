@@ -10,6 +10,18 @@ export const getLeaveCount = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+// Get pending leave count
+export const getPendingLeaveCount = async (req, res) => {
+  try {
+    const count = await Leave.countDocuments({ status: "Pending" });
+    res.json({ count });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 // Apply for leave
 export const applyLeave = async (req, res) => {
   try {
@@ -98,9 +110,13 @@ export const getLeavesByEmployee = async (req, res) => {
 export const updateLeaveStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, rejection_reason } = req.body;  // ✅ get rejection_reason
 
-    const leave = await Leave.findByIdAndUpdate(id, { status }, { new: true });
+    const leave = await Leave.findByIdAndUpdate(
+      id,
+      { status, rejection_reason: status === "Rejected" ? rejection_reason : null },
+      { new: true }
+    );
 
     if (!leave) return res.status(404).json({ message: "Leave not found" });
 
@@ -109,6 +125,7 @@ export const updateLeaveStatus = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
 
 // Delete leave
 export const deleteLeave = async (req, res) => {

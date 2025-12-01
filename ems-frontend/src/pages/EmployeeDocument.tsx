@@ -19,6 +19,7 @@ interface Document {
   created_at: string;
 }
 
+
 const EmployeeDocument = () => {
   const { id } = useParams();
   const employeeId = Number(id);
@@ -30,10 +31,30 @@ const EmployeeDocument = () => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+
+  const [employee, setEmployee] = useState<any>(null);
 
   useEffect(() => {
-    if (employeeId) fetchDocuments();
-  }, [employeeId]);
+  if (employeeId) {
+    fetchDocuments();
+    fetchEmployee();  // fetch the full employee object
+  }
+}, [employeeId]);
+
+  const fetchEmployee = async () => {
+  try {
+    const { data } = await axios.get(`/employees/${employeeId}`);
+    setEmployee(data);
+  } catch (err: any) {
+    console.error(err);
+    toast({
+      title: "Error",
+      description: "Unable to fetch employee data",
+      variant: "destructive",
+    });
+  }
+};
 
   const fetchDocuments = async () => {
     try {
@@ -70,13 +91,15 @@ const EmployeeDocument = () => {
       setLoading(true);
       const fileBase64 = await toBase64(file);
 
-      await axios.post("/documents", {
-        employee_id: employeeId,
-        category,
-        file_name: file.name,
-        file_url: fileBase64,
-        uploaded_by: "Admin",
-      });
+        await axios.post("/documents", {
+  employee_id: employeeId,
+  department: employee?.department_id,
+  designation: employee?.designation_id,
+  category,
+  file_name: file.name,
+  file_url: fileBase64,
+  uploaded_by: "Admin",
+});
 
       toast({
         title: "Upload successful",

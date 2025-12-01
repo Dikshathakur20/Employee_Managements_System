@@ -1,8 +1,12 @@
 import Designation from "../models/Designation.js";
+import Employee from "../models/Employee.js";
 
+
+
+// Get total designation count
 export const getDesignationCount = async (req, res) => {
   try {
-    const count = await Designation.countDocuments();
+    const count = await Designation.estimatedDocumentCount();
     res.json({ count });
   } catch (err) {
     console.error(err);
@@ -10,18 +14,21 @@ export const getDesignationCount = async (req, res) => {
   }
 };
 
+
 // Add new designation
 export const addDesignation = async (req, res) => {
   try {
     const { designation_id, designation_title, department_id } = req.body;
 
-    const existingDesignation = await Designation.findOne({ designation_id });
-    if (existingDesignation) {
+    const existing = await Designation.findOne({ designation_id }).lean();
+    if (existing)
       return res.status(400).json({ message: "Designation ID already exists" });
-    }
 
-    const designation = new Designation({ designation_id, designation_title, department_id });
-    await designation.save();
+    const designation = await Designation.create({
+      designation_id,
+      designation_title,
+      department_id
+    });
 
     res.status(201).json({ message: "Designation added successfully", designation });
   } catch (error) {
@@ -29,23 +36,54 @@ export const addDesignation = async (req, res) => {
   }
 };
 
-// Get all designations
+
+// Get all designations (Faster version)
 export const getAllDesignations = async (req, res) => {
   try {
-    const designations = await Designation.find().sort({ designation_title: 1 });
-    res.status(200).json(designations);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const designations = await Designation.find({})
+      .sort({ designation_title: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Fast employee count mapping
+    const ids = designations.map(d => d.designation_id);
+
+    const employeeCounts = await Employee.aggregate([
+      { $match: { designation_id: { $in: ids } } },
+      { $group: { _id: "$designation_id", count: { $sum: 1 } } }
+    ]);
+
+    const countMap = {};
+    employeeCounts.forEach(e => (countMap[e._id] = e.count));
+
+    const response = designations.map(d => ({
+      ...d,
+      total_employees: countMap[d.designation_id] || 0
+    }));
+
+    res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
+
 // Get designation by ID
 export const getDesignationById = async (req, res) => {
   try {
-    const { designation_id } = req.params;
-    const designation = await Designation.findOne({ designation_id });
+    const designation = await Designation.findOne({
+      designation_id: Number(req.params.designation_id)
+    })
+      .select("designation_id designation_title department_id")
+      .lean();
 
-    if (!designation) return res.status(404).json({ message: "Designation not found" });
+    if (!designation)
+      return res.status(404).json({ message: "Designation not found" });
 
     res.status(200).json(designation);
   } catch (error) {
@@ -53,19 +91,18 @@ export const getDesignationById = async (req, res) => {
   }
 };
 
+
 // Update designation
 export const updateDesignation = async (req, res) => {
   try {
-    const { designation_id } = req.params;
-    const { designation_title, department_id } = req.body;
-
     const designation = await Designation.findOneAndUpdate(
-      { designation_id },
-      { designation_title, department_id },
+      { designation_id: Number(req.params.designation_id) },
+      req.body,
       { new: true }
-    );
+    ).lean();
 
-    if (!designation) return res.status(404).json({ message: "Designation not found" });
+    if (!designation)
+      return res.status(404).json({ message: "Designation not found" });
 
     res.status(200).json({ message: "Designation updated", designation });
   } catch (error) {
@@ -73,14 +110,16 @@ export const updateDesignation = async (req, res) => {
   }
 };
 
+
 // Delete designation
 export const deleteDesignation = async (req, res) => {
   try {
-    const { designation_id } = req.params;
+    const designation = await Designation.findOneAndDelete({
+      designation_id: Number(req.params.designation_id)
+    }).lean();
 
-    const designation = await Designation.findOneAndDelete({ designation_id });
-
-    if (!designation) return res.status(404).json({ message: "Designation not found" });
+    if (!designation)
+      return res.status(404).json({ message: "Designation not found" });
 
     res.status(200).json({ message: "Designation deleted successfully" });
   } catch (error) {

@@ -129,11 +129,7 @@ const EmployeeDashboard = () => {
   };
 
   const fetchAllData = async (employeeId: number) => {
-    await Promise.all([
-      fetchTasks(employeeId),
-      fetchAttendance(employeeId),
-      fetchLeaves(employeeId),
-    ]);
+    await Promise.all([fetchTasks(employeeId), fetchAttendance(employeeId), fetchLeaves(employeeId)]);
     await checkIfOnLeave(employeeId);
   };
 
@@ -155,24 +151,45 @@ const EmployeeDashboard = () => {
     }
   };
 
-  const fetchAttendance = async (employeeId: number) => {
-    try {
-      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-      const { data } = await axiosClient.get(`/attendance/${employeeId}?date=${today}`);
-      setAttendance(data?.[0] || null);
-    } catch (err) {
-      console.error("Error fetching attendance:", err);
+  // ⭐ FIXED ATTENDANCE LOGIC: fetchAttendance now ensures we pick only today's entry
+ const fetchAttendance = async (employeeId: number) => {
+  try {
+    // CALL the dedicated "today" endpoint (this matches your routes)
+    const { data } = await axiosClient.get(`/attendance/today/${employeeId}`);
+
+    // debug: always log what we received after refresh
+    console.log("API /attendance/today response:", data);
+
+    // data is either an attendance object or null
+    if (!data) {
       setAttendance(null);
+      return;
     }
-  };
+
+    // normalize returned date to YYYY-MM-DD for frontend consistency (IST)
+    const rec: Attendance = {
+      id: (data as any)._id || (data as any).id || "", // keep id for later PUTs
+      date: new Date(data.date).toISOString(), // keep full ISO, format as needed in UI
+      check_in: data.check_in ? new Date(data.check_in).toISOString() : undefined,
+      check_out: data.check_out ? new Date(data.check_out).toISOString() : undefined,
+      status: data.status || "Present",
+    };
+
+    setAttendance(rec);
+  } catch (err) {
+    console.error("Error fetching attendance (frontend):", err);
+    // show nothing if network/404 — keep it null so UI shows Check In
+    setAttendance(null);
+  }
+};
+
+
 
   const checkIfOnLeave = async (employeeId: number) => {
     try {
       const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
       const { data } = await axiosClient.get(`/leaves/${employeeId}?status=Approved`);
-      const isOnLeave = data.some(
-        (leave: Leave) => today >= leave.start_date && today <= leave.end_date
-      );
+      const isOnLeave = data.some((leave: Leave) => today >= leave.start_date && today <= leave.end_date);
       setTodayLeaveStatus(isOnLeave ? "On Leave" : null);
     } catch (err) {
       console.error("Error checking leave:", err);
@@ -190,8 +207,13 @@ const EmployeeDashboard = () => {
         date: today,
         status: "Present",
       });
+
+      // backend should return created attendance object; if it returns array wrap/unwrap accordingly
+      const created: Attendance = Array.isArray(data) ? data[0] : data;
       toast.success("Checked in successfully!");
-      setAttendance(data);
+
+      // set attendance to the created/today record
+      setAttendance(created);
     } catch (err: any) {
       console.error("Check-in error:", err);
       toast.error(err?.response?.data?.message || "Check-in failed");
@@ -201,21 +223,32 @@ const EmployeeDashboard = () => {
   };
 
   const handleCheckOut = async () => {
-    if (!employee || !attendance) return;
-    setLoading(true);
-    try {
-      const { data } = await axiosClient.put(`/attendance/${attendance.id}`, {
-        check_out: getISTDateTime(),
-      });
-      toast.success("Checked out successfully!");
-      setAttendance(data);
-    } catch (err: any) {
-      console.error("Check-out error:", err);
-      toast.error(err?.response?.data?.message || "Check-out failed");
-    } finally {
-      setLoading(false);
+  if (!employee || !attendance) return;
+  setLoading(true);
+  try {
+    // ⭐ FIX: support both id and _id
+    const attendanceId = (attendance as any)._id || attendance.id;
+
+    if (!attendanceId) {
+      toast.error("Attendance ID missing. Cannot check out.");
+      return;
     }
-  };
+
+    const { data } = await axiosClient.put(`/attendance/${attendanceId}`, {
+      check_out: getISTDateTime(),
+    });
+
+    const updated: Attendance = Array.isArray(data) ? data[0] : data;
+    toast.success("Checked out successfully!");
+
+    setAttendance(updated);
+  } catch (err: any) {
+    console.error("Check-out error:", err);
+    toast.error(err?.response?.data?.message || "Check-out failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ------------------ MARQUEE STYLE ------------------
   const marqueeStyle = `@keyframes marquee {
@@ -237,9 +270,7 @@ const EmployeeDashboard = () => {
   const getISTDate = (date: string) =>
     new Date(date).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
-  const todaysNotifications = notifications.filter(
-    (n) => getISTDate(n.created_at) === todayIST
-  );
+  const todaysNotifications = notifications.filter((n) => getISTDate(n.created_at) === todayIST);
 
   const oldNotifications = notifications
     .filter((n) => getISTDate(n.created_at) !== todayIST)
@@ -316,12 +347,13 @@ const EmployeeDashboard = () => {
                       <li key={leave.id} className="flex justify-between border-b py-1 text-gray-700">
                         <span>{leave.leave_type}</span>
                         <span
-                          className={`${leave.status === "Approved"
+                          className={`${
+                            leave.status === "Approved"
                               ? "text-green-600"
                               : leave.status === "Rejected"
                               ? "text-red-600"
                               : "text-yellow-600"
-                            }`}
+                          }`}
                         >
                           {leave.status}
                         </span>
@@ -347,21 +379,26 @@ const EmployeeDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {attendance?.check_in && !attendance.check_out ? (
-                  <Button
-                    className="bg-blue-900 hover:bg-blue-900 text-white px-6 py-3 rounded-xl text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-                    onClick={handleCheckOut}
-                    disabled={loading}
-                  >
-                    <LogOut className="mr-2 h-5 w-5" /> Check Out
-                  </Button>
-                ) : !attendance?.check_in ? (
+                {/* Attendance button logic:
+                    - if no attendance today -> Check In
+                    - if check_in exists and no check_out -> Check Out
+                    - if both check_in and check_out exist -> Completed message
+                */}
+                {!attendance ? (
                   <Button
                     className="bg-blue-900 hover:bg-blue-900 text-white px-6 py-3 rounded-xl text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
                     onClick={handleCheckIn}
                     disabled={loading}
                   >
                     <LogIn className="mr-2 h-5 w-5" /> Check In
+                  </Button>
+                ) : attendance.check_in && !attendance.check_out ? (
+                  <Button
+                    className="bg-blue-900 hover:bg-blue-900 text-white px-6 py-3 rounded-xl text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                    onClick={handleCheckOut}
+                    disabled={loading}
+                  >
+                    <LogOut className="mr-2 h-5 w-5" /> Check Out
                   </Button>
                 ) : (
                   <p className="text-gray-500 font-medium">You have completed attendance for today.</p>

@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const axiosClient = axios.create({
-  baseURL: "https://employee-managements-system.onrender.com/api/",
+  baseURL: "https://employee-managements-system-eta.vercel.app/api",
 });
 
 // Add token to every request

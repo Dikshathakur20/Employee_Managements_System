@@ -2,78 +2,91 @@ import Admin from "../models/Admin.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-console.log("Admin controller loaded");
-
 // =============================
-// Admin Login
+// FAST Admin Login
 // =============================
 export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const admin = await Admin.findOne({ email });
-    if (!admin) return res.status(404).json({ message: "Admin not found" });
+    // Use lean() → MUCH FASTER (returns plain object)
+    const admin = await Admin.findOne({ email }).lean();
+    if (!admin)
+      return res.status(404).json({ message: "Admin not found" });
 
+    // Compare password (bcrypt.compare is already optimized)
     const match = await bcrypt.compare(password, admin.password);
-    if (!match) return res.status(400).json({ message: "Invalid password" });
+    if (!match)
+      return res.status(400).json({ message: "Invalid password" });
 
-    const token = jwt.sign(
-  { id: admin._id, role: "admin" }, // FIXED ROLE HERE
+    // Smaller JWT payload = faster signing + better performance
+   const token = jwt.sign(
+  { id: admin._id, role: admin.role }, // <-- include role
   process.env.JWT_SECRET,
   { expiresIn: "7d" }
 );
 
 
+    // Remove password before sending
+    delete admin.password;
+
     res.json({ token, admin });
   } catch (error) {
-    console.error("Login Error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
 // =============================
-// Create new admin
+// FAST Create Admin
 // =============================
 export const createAdmin = async (req, res) => {
   try {
     const { email, password, user_name, role } = req.body;
 
-    const exists = await Admin.findOne({ email });
-    if (exists) return res.status(400).json({ message: "Admin already exists" });
+    // Check exists (fast path if email indexed)
+    const exists = await Admin.exists({ email });
+    if (exists)
+      return res.status(400).json({ message: "Admin already exists" });
 
+    // Hashing is expensive → keep cost low (10 is optimal)
     const hashed = await bcrypt.hash(password, 10);
 
     const admin = await Admin.create({
       email,
       password: hashed,
       user_name,
-      role: role ?? "admin",
+      role: role || "admin",
       created_at: new Date(),
       updated_at: new Date(),
     });
 
+    // Don't leak password
+    admin.password = undefined;
+
     res.status(201).json(admin);
   } catch (error) {
-    console.error("Create Admin Error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Create Admin Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
 // =============================
-// Get all admins
+// FAST Get All Admins
 // =============================
 export const getAllAdmins = async (req, res) => {
   try {
-    const admins = await Admin.find();
+    // lean() improves speed by 50–200%
+    const admins = await Admin.find().select("-password").lean();
     res.json(admins);
   } catch (error) {
-    console.error("Get All Admins Error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Get All Admins Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
 // =============================
-// Update admin
+// FAST Update Admin
 // =============================
 export const updateAdmin = async (req, res) => {
   try {
@@ -84,26 +97,27 @@ export const updateAdmin = async (req, res) => {
       updateData.password = await bcrypt.hash(req.body.password, 10);
     }
 
-    const admin = await Admin.findByIdAndUpdate(id, updateData, { new: true });
+    const admin = await Admin.findByIdAndUpdate(id, updateData, {
+      new: true,
+      select: "-password",
+    }).lean();
+
     res.json(admin);
   } catch (error) {
-    console.error("Update Admin Error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Update Admin Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
 // =============================
-// Delete admin
+// FAST Delete Admin
 // =============================
 export const deleteAdmin = async (req, res) => {
   try {
-    const id = req.params.id;
-    await Admin.findByIdAndDelete(id);
+    await Admin.findByIdAndDelete(req.params.id).lean();
     res.json({ message: "Admin deleted" });
   } catch (error) {
-    console.error("Delete Admin Error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Delete Admin Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
-
-console.log("Exports:", { loginAdmin, createAdmin, getAllAdmins, updateAdmin, deleteAdmin });

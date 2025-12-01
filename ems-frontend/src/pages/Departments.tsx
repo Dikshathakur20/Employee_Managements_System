@@ -92,29 +92,50 @@ const Departments = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    try {
-      if (!confirm("Are you sure you want to delete this department?")) return;
-
-      await axiosClient.delete(`/departments/${id}`);
-
-      toast({ title: "Deleted", description: "Department removed successfully" });
-      fetchDepartments();
-    } catch (err) {
-      console.error(err);
-      toast({ title: "Error", description: "Error while deleting department.", variant: "destructive" });
+  const handleDelete = async (id: number, totalEmployees: number, totalDesignations: number) => {
+  try {
+    // Prevent deletion if employees or designations exist
+    if (totalEmployees > 0 || totalDesignations > 0) {
+      toast({
+        title: "Cannot delete",
+        description: "This department has employees or designations assigned.",
+        variant: "destructive",
+      });
+      return;
     }
-  };
+
+    if (!confirm("Are you sure you want to delete this department?")) return;
+
+    await axiosClient.delete(`/departments/${id}`);
+    toast({ title: "Deleted", description: "Department removed successfully" });
+    fetchDepartments();
+  } catch (err) {
+    console.error(err);
+    toast({ title: "Error", description: "Error while deleting department.", variant: "destructive" });
+  }
+};
+
 
   const fetchDepartmentDesignations = async (id: number) => {
-    try {
-      const res = await axiosClient.get(`/designations/by-department/${id}`);
-      setDepartmentDesignations(res.data || []);
-    } catch {
-      toast({ title: "Error", description: "Unable to fetch designations" });
-      setDepartmentDesignations([]);
-    }
-  };
+  try {
+    const res = await axiosClient.get(`/designations`);
+    
+    // Filter only those that belong to the department
+    const filtered = (res.data || []).filter(
+      (des: any) => des.department_id === id
+    );
+
+    setDepartmentDesignations(filtered);
+  } catch (err) {
+    console.error(err);
+    toast({
+      title: "Error",
+      description: "Unable to fetch designations",
+    });
+    setDepartmentDesignations([]);
+  }
+};
+
 
   const filtered = departments.filter((d) =>
     d.department_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -204,33 +225,35 @@ const Departments = () => {
                     <TableRow key={d.department_id}>
   {/* Department Name → Employees filtered by dept */}
   <TableCell>
-    <a
-      href={`/employees?department=${d.department_id}`}
-      className="text-blue-700 hover:underline cursor-pointer"
-    >
       {d.department_name}
-    </a>
   </TableCell>
 
-  {/* Total Designations → Designations filtered by dept */}
   <TableCell className="text-center">
+  {d.total_designations > 0 ? (
     <a
       href={`/designations?department=${d.department_id}`}
-      className="text-blue-700 hover:underline cursor-pointer"
+      className="text-gray-700 hover: text-blue-700  cursor-pointer"
     >
       {d.total_designations}
     </a>
-  </TableCell>
+  ) : (
+    <span className="text-gray-500">{d.total_designations}</span>
+  )}
+</TableCell>
 
-  {/* Total Employees → Employees filtered by dept */}
-  <TableCell className="text-center">
+<TableCell className="text-center">
+  {d.total_employees > 0 ? (
     <a
       href={`/employees?department=${d.department_id}`}
-      className="text-blue-700 hover:underline cursor-pointer"
+      className="text-gray-700 hover: text-blue-700  cursor-pointer"
     >
       {d.total_employees}
     </a>
-  </TableCell>
+  ) : (
+    <span className="text-gray-500">{d.total_employees}</span>
+  )}
+</TableCell>
+
 
   {/* Actions (unchanged) */}
   <TableCell className="text-end">
@@ -254,13 +277,14 @@ const Departments = () => {
         <Edit className="h-3.5 w-3.5" />
       </Button>
 
-      <Button
-        size="sm"
-        className="bg-blue-900 text-white h-7 w-7 p-0"
-        onClick={() => handleDelete(d.department_id)}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
+    <Button
+  size="sm"
+  className="bg-blue-900 text-white h-7 w-7 p-0"
+  onClick={() => handleDelete(d.department_id, d.total_employees ?? 0, d.total_designations ?? 0)}
+>
+  <Trash2 className="h-3.5 w-3.5" />
+</Button>
+
     </div>
   </TableCell>
 </TableRow>
@@ -345,7 +369,7 @@ const Departments = () => {
           {viewingDepartment && (
             <div className="space-y-2">
               <p><strong>Name:</strong> {viewingDepartment.department_name}</p>
-              <p><strong>Location:</strong> {viewingDepartment.location || "N/A"}</p>
+            {/*}  <p><strong>Location:</strong> {viewingDepartment.location || "N/A"}</p>*/}
 
               <p className="mt-4 font-semibold">Designations:</p>
               {departmentDesignations.length === 0 ? (

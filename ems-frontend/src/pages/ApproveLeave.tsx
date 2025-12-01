@@ -1,6 +1,14 @@
+// =============================
+// ApproveLeave.tsx - Fixed Dates Parsing
+// =============================
 import React, { useEffect, useState } from "react";
-import axiosClient from "@/utils/axiosClient";   // ⬅ NEW
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import axiosClient from "@/utils/axiosClient";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import {
@@ -14,7 +22,7 @@ import {
 import { Search } from "lucide-react";
 
 interface LeaveRequest {
-  id: string;
+  _id: string;
   employee_id: string;
   leave_type: string;
   start_date: string;
@@ -31,21 +39,29 @@ const ApproveLeave: React.FC = () => {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [selectedLeaveId, setSelectedLeaveId] = useState<string | null>(null);
 
+  // ---------------------------
+  // HELPER: Safe date formatting
+  // ---------------------------
+  const formatDate = (d?: string | null) => {
+    if (!d) return "—";
+    // Replace space with 'T' and remove microseconds if present
+    const cleanDate = d.split(".")[0].replace(" ", "T");
+    const date = new Date(cleanDate);
+    return isNaN(date.getTime()) ? "—" : date.toLocaleDateString("en-GB");
+  };
+
   // ====================================================
-  // FETCH ALL LEAVE REQUESTS
+  // FETCH LEAVE REQUESTS
   // ====================================================
   const fetchLeaveRequests = async () => {
     try {
       setLoading(true);
-
-      // ⬇ Using axiosClient — no token needed here
       const res = await axiosClient.get("/leaves");
-
+      console.log("Leave data fetched:", res.data); // Optional: debug
       setLeaveRequests(res.data || []);
     } catch (err) {
       toast.error("Failed to load leave requests.");
@@ -59,22 +75,21 @@ const ApproveLeave: React.FC = () => {
   }, []);
 
   // ====================================================
-  // FILTER
+  // FILTER REQUESTS
   // ====================================================
   const filteredRequests = leaveRequests.filter((leave) => {
     const name = leave.employee_name?.toLowerCase() || "";
     const dept = leave.department_name?.toLowerCase() || "";
-
-    return (
-      name.includes(searchTerm.toLowerCase()) ||
-      dept.includes(searchTerm.toLowerCase())
-    );
+    const term = searchTerm.toLowerCase();
+    return name.includes(term) || dept.includes(term);
   });
 
-  const hasPending = filteredRequests.some((req) => req.status === "Pending");
+  const pendingRequests = filteredRequests.filter(
+    (req) => req.status === "Pending"
+  );
 
   // ====================================================
-  // UPDATE LEAVE STATUS
+  // UPDATE STATUS
   // ====================================================
   const handleUpdateStatus = async (
     id: string,
@@ -83,13 +98,10 @@ const ApproveLeave: React.FC = () => {
   ) => {
     try {
       setLoading(true);
-
-      // ⬇ Using axiosClient
       await axiosClient.put(`/leaves/status/${id}`, {
         status: newStatus,
         rejection_reason: newStatus === "Rejected" ? reason : null,
       });
-
       toast.success(`Leave ${newStatus.toLowerCase()} successfully.`);
       fetchLeaveRequests();
     } catch (err) {
@@ -101,62 +113,54 @@ const ApproveLeave: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      {/* Pending Requests Panel */}
-      {hasPending && (
-        <div className="mt-6 bg-white border shadow-md p-4 rounded-lg max-w-3xl mx-auto">
+      {/* PENDING REQUESTS TO APPROVE */}
+      {pendingRequests.length > 0 && (
+        <div className="mt-6 bg-white border shadow-md p-5 rounded-lg max-w-3xl mx-auto">
           <h2 className="text-xl font-semibold mb-3 text-[#001F7A]">
-            Approve or Reject Pending Requests
+            Pending Leave Approval
           </h2>
-
-          {filteredRequests
-            .filter((req) => req.status === "Pending")
-            .map((req) => (
-              <div
-                key={req.id}
-                className="flex justify-between items-center border-b py-3"
-              >
-                <div>
-                  <p className="font-medium">{req.employee_name}</p>
-                  <p className="text-gray-600 text-sm">{req.leave_type}</p>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    className="bg-blue-900 text-white px-4 py-2 text-sm rounded-md"
-                    onClick={() => handleUpdateStatus(req.id, "Approved")}
-                    disabled={loading}
-                  >
-                    Approve
-                  </Button>
-
-                  <Button
-                    className="bg-red-600 text-white px-4 py-2 text-sm rounded-md"
-                    onClick={() => {
-                      setSelectedLeaveId(req.id);
-                      setShowRejectModal(true);
-                    }}
-                    disabled={loading}
-                  >
-                    Reject
-                  </Button>
-                </div>
+          {pendingRequests.map((req) => (
+            <div
+              key={req._id}
+              className="flex justify-between items-center border-b py-3"
+            >
+              <div>
+                <p className="font-medium text-gray-900">{req.employee_name}</p>
+                <p className="text-gray-600 text-sm">{req.leave_type}</p>
               </div>
-            ))}
+              <div className="flex gap-3">
+                <Button
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => handleUpdateStatus(req._id, "Approved")}
+                >
+                  Approve
+                </Button>
+                <Button
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={() => {
+                    setSelectedLeaveId(req._id);
+                    setShowRejectModal(true);
+                  }}
+                >
+                  Reject
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Main Table */}
-      <Card className="max-w-6xl mx-auto border shadow-md">
+      {/* MAIN TABLE */}
+      <Card className="max-w-6xl mx-auto border shadow-md mt-8">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <CardTitle className="text-[#001F7A] text-2xl font-bold">
             Leave Requests Management
           </CardTitle>
 
-          {/* Search Bar */}
           <div className="relative w-full sm:w-80">
             <input
               type="text"
-              placeholder="Search"
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8 pr-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-900"
@@ -175,94 +179,58 @@ const ApproveLeave: React.FC = () => {
           </div>
         </CardHeader>
 
-        <CardContent className="px-0 flex-1 flex flex-col overflow-hidden">
+        <CardContent>
           <div className="border rounded-lg overflow-auto">
             <Table className="min-w-full">
-              <TableHeader
-                className="w-full bg-blue-50 p-4 rounded-xl"
-                style={{ background: "linear-gradient(-45deg, #ffffff, #c9d0fb)" }}
-              >
+              <TableHeader className="bg-blue-50">
                 <TableRow>
-                  <TableHead className="font-bold">Employee</TableHead>
-                  <TableHead className="font-bold">Department</TableHead>
-                  <TableHead className="font-bold">Leave Type</TableHead>
-                  <TableHead className="font-bold">Start Date</TableHead>
-                  <TableHead className="font-bold">End Date</TableHead>
-                  <TableHead className="font-bold">Reason</TableHead>
-                  <TableHead className="font-bold">Status</TableHead>
-                  <TableHead className="font-bold">Applied On</TableHead>
-                  <TableHead className="font-bold">Rejection Reason</TableHead>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Leave Type</TableHead>
+                  <TableHead>Start</TableHead>
+                  <TableHead>End</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Applied On</TableHead>
+                  <TableHead>Rejection Reason</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={10}
-                      className="text-center py-3 text-muted-foreground"
-                    >
+                    <TableCell colSpan={10} className="text-center py-3">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : filteredRequests.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={10}
-                      className="text-center py-3 text-muted-foreground"
-                    >
+                    <TableCell colSpan={10} className="text-center py-3">
                       No leave requests found.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredRequests.map((leave) => (
-                    <TableRow
-                      key={leave.id}
-                      className="hover:bg-gray-100 cursor-default h-10"
-                    >
-                      <TableCell className="py-1 text-sm">
-                        {leave.employee_name}
-                      </TableCell>
-
-                      <TableCell className="py-1 text-sm">
-                        {leave.department_name || "—"}
-                      </TableCell>
-
-                      <TableCell className="py-1 text-sm">
-                        {leave.leave_type}
-                      </TableCell>
-
-                      <TableCell className="py-1 text-sm">
-                        {leave.start_date}
-                      </TableCell>
-
-                      <TableCell className="py-1 text-sm">
-                        {leave.end_date}
-                      </TableCell>
-
-                      <TableCell className="py-1 text-sm">
-                        {leave.reason}
-                      </TableCell>
-
+                    <TableRow key={leave._id} className="hover:bg-gray-100">
+                      <TableCell>{leave.employee_name}</TableCell>
+                      <TableCell>{leave.department_name}</TableCell>
+                      <TableCell>{leave.leave_type}</TableCell>
+                      <TableCell>{formatDate(leave.start_date)}</TableCell>
+                      <TableCell>{formatDate(leave.end_date)}</TableCell>
+                      <TableCell>{leave.reason}</TableCell>
                       <TableCell
-                        className={`py-1 font-semibold text-sm ${
+                        className={
                           leave.status === "Approved"
-                            ? "text-green-600"
+                            ? "text-green-600 font-semibold"
                             : leave.status === "Rejected"
-                            ? "text-red-600"
-                            : "text-yellow-600"
-                        }`}
+                            ? "text-red-600 font-semibold"
+                            : "text-yellow-600 font-semibold"
+                        }
                       >
                         {leave.status}
                       </TableCell>
-
-                      <TableCell className="py-1 text-sm">
-                        {new Date(leave.created_at).toLocaleDateString()}
-                      </TableCell>
-
-                      <TableCell className="py-1 text-sm">
-                        {leave.rejection_reason || "—"}
-                      </TableCell>
+                      <TableCell>{formatDate(leave.created_at)}</TableCell>
+                      <TableCell>{leave.rejection_reason || "—"}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -272,7 +240,7 @@ const ApproveLeave: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Reject Modal */}
+      {/* REJECT MODAL */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
@@ -289,7 +257,7 @@ const ApproveLeave: React.FC = () => {
 
             <div className="flex justify-end gap-3 mt-4">
               <Button
-                className="bg-gray-500 text-white px-4 py-2 rounded-md"
+                className="bg-gray-500 text-white"
                 onClick={() => {
                   setShowRejectModal(false);
                   setRejectReason("");
@@ -299,7 +267,7 @@ const ApproveLeave: React.FC = () => {
               </Button>
 
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
+                className="bg-red-600 hover:bg-red-700 text-white"
                 onClick={() => {
                   if (!rejectReason.trim()) {
                     toast.error("Rejection reason is required");

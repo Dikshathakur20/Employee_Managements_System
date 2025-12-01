@@ -474,7 +474,7 @@ const Employees = () => {
           <TableCell className="px-2 py-1 text-sm">{new Date(emp.hire_date).toLocaleDateString("en-GB")}</TableCell>
           <TableCell className="px-2 py-1 text-sm">{emp.salary ? `₹${emp.salary.toLocaleString("en-IN")}` : "-"}</TableCell>
 
-          <TableCell className="px-2 py-1 text-sm text-right cursor-default">
+          
             {/* Actions remain as-is */}<TableCell className="px-2 py-1 text-sm text-right cursor-default">
                           <div className="flex justify-end gap-1">
                             <Button size="sm" variant="outline" title="View" className="bg-blue-900 text-white hover:bg-blue-700 h-7 w-7 p-0 flex items-center justify-center" onClick={() => setViewingEmployee(emp)}>

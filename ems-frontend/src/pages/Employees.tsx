@@ -400,6 +400,7 @@ const Employees = () => {
                 <Table className="table-auto min-w-full">
                   <TableHeader className="w-full bg-blue-50 p-6 rounded-xl" style={{ background: "linear-gradient(-45deg, #ffffff, #c9d0fb)" }}>
                     <TableRow>
+                      <TableHead className="px-2 py-1 text-left text-sm font-semibold"></TableHead> {/* For checkbox */}
                       <TableHead className="px-2 py-1 text-left text-sm font-semibold">Profile</TableHead>
                       <TableHead className="px-2 py-1 text-left text-sm font-semibold">Name</TableHead>
                       <TableHead className="px-2 py-1 text-left text-sm font-semibold">Email</TableHead>

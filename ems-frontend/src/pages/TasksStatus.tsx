@@ -102,86 +102,110 @@ Task Status Board </CardTitle>
     </CardHeader>
 
     <CardContent>
+    
       {loading ? (
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="h-6 w-6 animate-spin text-white" />
-        </div>
-      ) : filteredTasks.length === 0 ? (
-        <p className="text-center text-gray-500">No tasks found.</p>
-      ) : (
-        <div className="relative overflow-x-auto">
-          {/* 🔵 Selection Loader Overlay */}
-          {selectionLoading && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-900" />
-            </div>
-          )}
+  <div className="relative overflow-x-auto">
+    <table className="w-full border border-gray-200 rounded-lg text-sm bg-white text-gray-800">
+      <thead className="bg-[#001F7A] text-white">
+        <tr>
+          <th className="py-2 px-3 text-left">Employee</th>
+          <th className="py-2 px-3 text-left">Department</th>
+          <th className="py-2 px-3 text-left">Task Title</th>
+          <th className="py-2 px-3 text-left">Due Date</th>
+          <th className="py-2 px-3 text-left">Status</th>
+          <th className="py-2 px-3 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <tr key={idx} className="border-b">
+            {Array.from({ length: 6 }).map((__, i) => (
+              <td key={i} className="py-2 px-3">
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+) : filteredTasks.length === 0 ? (
+  <p className="text-center text-gray-500">No tasks found.</p>
+) : (
+  <div className="relative overflow-x-auto">
+    {/* 🔵 Selection Loader Overlay */}
+    {selectionLoading && (
+      <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-900" />
+      </div>
+    )}
 
-          <table
-            className={`w-full border border-gray-200 rounded-lg text-sm bg-white text-gray-800 ${
-              selectionLoading ? "pointer-events-none opacity-60" : ""
-            }`}
-          >
-            <thead className="bg-[#001F7A] text-white">
-              <tr>
-                <th className="py-2 px-3 text-left">Employee</th>
-                <th className="py-2 px-3 text-left">Department</th>
-                <th className="py-2 px-3 text-left">Task Title</th>
-                <th className="py-2 px-3 text-left">Due Date</th>
-                <th className="py-2 px-3 text-left">Status</th>
-                <th className="py-2 px-3 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map((task) => (
-                <tr key={task._id || task.id} className="border-b hover:bg-gray-50 transition">
-                  <td className="py-2 px-3">{task.employee_name || "Unknown"}</td>
-                  <td className="py-2 px-3">{task.department_name || "—"}</td>
-                  <td className="py-2 px-3 font-medium">{task.task_title}</td>
-                  <td className="py-2 px-3">
-                    {task.due_date
-                      ? new Date(task.due_date).toLocaleDateString("en-IN", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "-"}
-                  </td>
-                  <td
-                    className={`py-2 px-3 font-semibold ${
-                      task.status === "Completed"
-                        ? "text-green-600"
-                        : task.status === "In Progress"
-                        ? "text-yellow-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {task.status}
-                  </td>
-                  <td className="py-2 px-3 flex justify-center gap-2">
-                    <Button
-                      size="sm"
-                      className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
-                      onClick={() => handleChangeDueDate(task._id || task.id)}
-                    >
-                      <CalendarDays className="h-3.5 w-3.5 mr-1" />
-                      Change Due Date
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
-                      onClick={handleNewTask}
-                    >
-                      <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                      New Task
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <table
+      className={`w-full border border-gray-200 rounded-lg text-sm bg-white text-gray-800 ${
+        selectionLoading ? "pointer-events-none opacity-60" : ""
+      }`}
+    >
+      <thead className="bg-[#001F7A] text-white">
+        <tr>
+          <th className="py-2 px-3 text-left">Employee</th>
+          <th className="py-2 px-3 text-left">Department</th>
+          <th className="py-2 px-3 text-left">Task Title</th>
+          <th className="py-2 px-3 text-left">Due Date</th>
+          <th className="py-2 px-3 text-left">Status</th>
+          <th className="py-2 px-3 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filteredTasks.map((task) => (
+          <tr key={task._id || task.id} className="border-b hover:bg-gray-50 transition">
+            <td className="py-2 px-3">{task.employee_name || "Unknown"}</td>
+            <td className="py-2 px-3">{task.department_name || "—"}</td>
+            <td className="py-2 px-3 font-medium">{task.task_title}</td>
+            <td className="py-2 px-3">
+              {task.due_date
+                ? new Date(task.due_date).toLocaleDateString("en-IN", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "-"}
+            </td>
+            <td
+              className={`py-2 px-3 font-semibold ${
+                task.status === "Completed"
+                  ? "text-green-600"
+                  : task.status === "In Progress"
+                  ? "text-yellow-600"
+                  : "text-red-600"
+              }`}
+            >
+              {task.status}
+            </td>
+            <td className="py-2 px-3 flex justify-center gap-2">
+              <Button
+                size="sm"
+                className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
+                onClick={() => handleChangeDueDate(task._id || task.id)}
+              >
+                <CalendarDays className="h-3.5 w-3.5 mr-1" />
+                Change Due Date
+              </Button>
+              <Button
+                size="sm"
+                className="bg-blue-900 hover:bg-blue-900 text-white h-7 px-2"
+                onClick={handleNewTask}
+              >
+                <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                New Task
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
+
     </CardContent>
   </Card>
 

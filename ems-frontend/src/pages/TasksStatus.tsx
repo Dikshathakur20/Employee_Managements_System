@@ -86,7 +86,7 @@ department.includes(searchTerm.toLowerCase())
 return ( <div className="min-h-screen bg-background text-foreground p-6 relative"> <Card> <CardHeader> <div className="flex justify-between items-center"> <CardTitle className="flex items-center gap-2 text-xl font-semibold text-blue"> <ClipboardList className="h-5 w-5 text-blue-900" />
 Task Status Board </CardTitle>
 
-```
+
         {/* 🔍 Search Bar */}
         <div className="relative">
           <input

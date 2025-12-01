@@ -13,24 +13,29 @@ jobs:
       contents: read
       pages: write
       id-token: write
+
     steps:
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Setup Node.js
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: 18
 
+      # 3. Install dependencies
       - name: Install dependencies
         working-directory: ./ems-frontend
-        run: npm ci
+        run: npm install
 
+      # 4. Build frontend
       - name: Build frontend
         working-directory: ./ems-frontend
         run: npm run build
 
+      # 5. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
